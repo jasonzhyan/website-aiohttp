@@ -12,7 +12,7 @@ import time
 import uuid
 
 def next_id():
-    return '%015d%s000'%(int(time.time()*1000),uuid.uuid4().hex())#uuid 是python中生成唯一id、uuid4()——基于随机数由伪随机数得到，有一定的重复概率，该概率可以计算出来。
+    return '%015d%s000'%(int(time.time()*1000),uuid.uuid4().hex)#uuid 是python中生成唯一id、uuid4()——基于随机数由伪随机数得到，有一定的重复概率，该概率可以计算出来。
 
                 
 
@@ -25,7 +25,7 @@ class User(Model):
     admin=BooleanField()                        #另一个是default值会用到，因为getValueOrDefault()方法会调用__mapping__里的对应属性的default值。
     name=StringField(ddl='varchar(50)')         #其实还有一个，就是Feild对象的name属性，如果跟你使用的key不一样的话，会被调出来替换key生成sql语句。
     image=StringField(ddl='varchar(500)')
-    creat_at=FloatField(default=time.time)
+    created_at=FloatField(default=time.time)
     
 class Blog(Model):
     __table__='blogs'

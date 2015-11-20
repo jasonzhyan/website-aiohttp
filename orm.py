@@ -7,7 +7,24 @@ import aiomysql
 import asyncio
 import logging;logging.basicConfig(level=logging.INFO)
 
+@asyncio.coroutine
+def create_pool(loop, **kw):
+    logging.info('create database connection pool...')
+    global __pool
+    __pool = yield from aiomysql.create_pool(
+        host=kw.get('host', 'localhost'),
+        port=kw.get('port', 3306),
+        user=kw['user'],
+        password=kw['password'],
+        db=kw['db'],
+        charset=kw.get('charset', 'utf8'),
+        autocommit=kw.get('autocommit', True),
+        maxsize=kw.get('maxsize', 10),
+        minsize=kw.get('minsize', 1),
+        loop=loop
+    )
 
+'''
 @asyncio.coroutine
 def create_pool(loop,**kw):                     #create a connection pool
     logging.info('create database connection pool...')
@@ -16,16 +33,16 @@ def create_pool(loop,**kw):                     #create a connection pool
                                                 # and I think it is equals mysql.connector.connec(user=.....)   
         host=kw.get('host','localhost'),        # 为pool的参数赋值,kw为可视为（组装为）dict的关键字参数，这说明函数create_pool可接受关键字参数，或者命名关键字参数
         port=kw.get('port',3306),               # it means kw have a function".get" 3306是'port'不存在时的默认值
-        user=kw.get('user','root'),
-        password=kw.get('password','password'),                 # it means kw is a dictionary
-        db=kw.get('database','firsttime'),
+        user=kw['user'],
+        password=kw['password'],                 # it means kw is a dictionary
+        db=kw['db'],
         charset=kw.get('charset','utf8'),       #除了数据库名，用户名，密码，其他都有默认值
         autocommit=kw.get('aotocommit',True),
         maxsize=kw.get('maxsize',10),
         minsize=kw.get('minsize',1),
         loop=loop
     )
-    
+'''    
 @asyncio.coroutine
 def select(sql,args,size=None):           #create a "select" function with whom we can do select words
     log(sql,args)  #what is log？
@@ -44,18 +61,18 @@ def select(sql,args,size=None):           #create a "select" function with whom 
         
 @asyncio.coroutine
 def execute(sql,args):   #this function is used for the words"delete","update","modify","insert"
-    log(sql)
+    logging.info(sql)
     global __pool #is there any affection with this row? and can I add this?
     with (yield from __pool) as conn:
-        try:                        #为什么这里有try而select没有。这里容易出错。
+        try:                        #为什么这里有try而select没有。这里容易出错?
             cursor=yield from conn.cursor()
-            yield from cursor.execute(sql.replace('?','%s'),args)
+            yield from cursor.execute(sql.replace('?','%s'),args)#"insert into `users` (`id`,`email`) values ('8','d@b.com')"
             affected = cursor.rowcount
             yield from cursor.close()
         except BaseException as e:  #基础错误？框架异常基类
             raise
         return affected
-        
+ 	           
 
 def create_args_string(times):
     if times==0:
@@ -101,7 +118,7 @@ class ModelMetaclass(type):
             
         #再创建四个sql语句也作为属性值记录，因为基类Model无法接触子类User的属性，所以语句的创建放在MetaClass里。
         attrs['__select__']='select `%s`,%s  from `%s` ' %(primaryKey,','.join(escaped_fields),tableName)#为什么每个列名、表名都要加上``???
-        attrs['__insert__']='insert into `%s`(%s,`%s`) values (%s)'%(tableName,','.join(escaped_fields),primaryKey,create_args_string(len(escaped_fields)+1))#create_args_string这个函数在哪里
+        attrs['__insert__']='insert into `%s` (%s,`%s`) values (%s)'%(tableName,','.join(escaped_fields),primaryKey,create_args_string(len(escaped_fields)+1))#create_args_string这个函数在哪里
         #attrs['__insert__']='insert into `%s`(%s,`%s`) values (%s)' % (tableName, ', '.join(escaped_fields), primaryKey, create_args_string(len(escaped_fields) + 1))
         attrs['__update__']='update `%s` set %s where `%s`=?' % (tableName,','.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f),fields)),primaryKey)
         attrs['__delete__']='delete from `%s` where `%s`=?' % (tableName,primaryKey)
@@ -175,8 +192,7 @@ class Model(dict,metaclass=ModelMetaclass):#实现特殊方法的dict，1.特殊
         if rows != 1:
             logging.warn('failed to insert record:affected rows:%s' % rows)
 
-
-    
+        
 class Field(object):                                              #Model是table，那Field就是 Table里的 column
 
     def __init__(self,name,column_type,primary_key,default):
@@ -200,8 +216,9 @@ class IngeterField(Field):#列类型column type为数值型int(20)的Field
         super().__init__(self,ddl,primary_key,default)
         
 class BooleanField(Field):
-    def __init__(self,name=None,primary_key=False,default=None,ddl='bool'):
-        super().__init__(name,ddl,primary_key,default)
+    def __init__(self,name=None,primary_key=False,default=False,ddl='bool'):
+        super().__init__(name,ddl,primary_key,default)
+
 class FloatField(Field):
     def __init__(self,name=None,primary_key=False,default=None,ddl='real'):
         super().__init__(name,ddl,primary_key,default)
