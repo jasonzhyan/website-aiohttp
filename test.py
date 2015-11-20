@@ -9,9 +9,15 @@ import asyncio
 def test(loop):
     
     yield from orm.create_pool(loop=loop,user='root',password='password',db='first')
-    u=User(name='test3',email='test4@test.com',passwd='test',image='about:blank')
+    u=User(name='3',email='31',passwd='311')
     yield from u.save()
-    
+    u=User(name='4',email='41',passwd='411')
+    yield from u.save()
+    us=yield from User.findAll('name','1')
+    print(us)   
+    print(type(us[0].getValue(us[0].__primary_key__)))
+    num=yield from us[0].remove()
+    print(num)
 
 loop = asyncio.get_event_loop()
    

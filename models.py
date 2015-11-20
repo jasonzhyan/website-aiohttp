@@ -24,7 +24,7 @@ class User(Model):
     passwd=StringField(ddl='varchar(50)')       #也不会影响实例，但是有两个例外，一个是primary为True的属性把name保存在类属性__primary_key__中，以及生成的sql语句中
     admin=BooleanField()                        #另一个是default值会用到，因为getValueOrDefault()方法会调用__mapping__里的对应属性的default值。
     name=StringField(ddl='varchar(50)')         #其实还有一个，就是Feild对象的name属性，如果跟你使用的key不一样的话，会被调出来替换key生成sql语句。
-    image=StringField(ddl='varchar(500)')
+    image=StringField(default='about:blank',ddl='varchar(500)')
     created_at=FloatField(default=time.time)
     
 class Blog(Model):

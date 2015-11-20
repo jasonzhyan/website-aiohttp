@@ -45,7 +45,7 @@ def create_pool(loop,**kw):                     #create a connection pool
 '''    
 @asyncio.coroutine
 def select(sql,args,size=None):           #create a "select" function with whom we can do select words
-    log(sql,args)  #what is log？
+    logging.info(sql)  #what is log？
     global __pool                           #声明全局变量？
     with (yield from __pool) as conn:    #create a connection with connction pool "__pool"
         cursor=yield from conn.cursor(aiomysql.DictCursor)
@@ -66,7 +66,7 @@ def execute(sql,args):   #this function is used for the words"delete","update","
     with (yield from __pool) as conn:
         try:                        #为什么这里有try而select没有。这里容易出错?
             cursor=yield from conn.cursor()
-            yield from cursor.execute(sql.replace('?','%s'),args)#"insert into `users` (`id`,`email`) values ('8','d@b.com')"
+            yield from cursor.execute(sql.replace('?','%s'),args)
             affected = cursor.rowcount
             yield from cursor.close()
         except BaseException as e:  #基础错误？框架异常基类
@@ -162,20 +162,22 @@ class Model(dict,metaclass=ModelMetaclass):#实现特殊方法的dict，1.特殊
         if len(rs)==0:
             return None
         return cls(**rs[0])  #生成一个类的实例作为返回值，代表找到table里的一行数据，还好本来sql里的一行数据就表示一个对象。
-    '''    
+       
     @classmethod
     @asyncio.coroutine  
-    def findAll(cls,**kv):        #unfinished method and need more test!!!
-        'find object by key=v.' 
-        for key in kv:
-            rs=yield form select('%s where `%s`=?'%(cls.__select__, key),[kv[key]])
+    def findAll(cls,k0,v0):        #unfinished method and need more test!!!
+        'find object by k0=v0.' 
+        
+        rs=yield from select('%s where `%s`=?'%(cls.__select__, k0),[v0])
+        list0=[]
+        for i in rs:
+            list0.append(cls(**i))
+        return list0
     
-        return list(map(cls,**rs))
-    '''
     @asyncio.coroutine
     def remove(self):
-        args=list(self.getValueOrDefault(self.__primary_key__))
-        rows=yield from execute(self.__delete__,args)
+        args=self.getValue(self.__primary_key__)
+        rows=yield from execute(self.__delete__,[args])#'delete from `users` where `id`=?','001448009226486361e7bcaaa634173b480cf9a680b543e000'
         if rows!=1:
             logging.warn('failed to delete record:affected rows is:%s' % rows)
         return rows
